@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rapport IPS — Indice de Position Sociale des établissements scolaires</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <style>
+    :root {
+      --pico-font-size: 16px;
+      --color-ecole: #3b82f6;
+      --color-college: #f59e0b;
+      --color-lycee: #ef4444;
+      --color-public: #6366f1;
+      --color-prive: #f97316;
+    }
+    body { background: #f8fafc; }
+    header.hero {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      color: white; padding: 3rem 0; margin-bottom: 2rem; text-align: center;
+    }
+    header.hero h1 { color: white; margin-bottom: 0.5rem; font-size: 2.2rem; }
+    header.hero p { color: #94a3b8; margin: 0; font-size: 1.1rem; }
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem; margin-bottom: 2rem;
+    }
+    .kpi-card {
+      background: white; border-radius: 12px; padding: 1.5rem; text-align: center;
+      border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .kpi-card .value { font-size: 2.2rem; font-weight: 800; color: #1e293b; line-height: 1.1; }
+    .kpi-card .label { font-size: 0.85rem; color: #64748b; margin-top: 0.3rem; }
+    .kpi-card.highlight { border-left: 4px solid #3b82f6; }
+    .chart-section {
+      background: white; border-radius: 12px; padding: 1.5rem 2rem; margin-bottom: 1.5rem;
+      border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .chart-section h3 {
+      margin-top: 0; font-size: 1.15rem; color: #1e293b;
+      border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem;
+    }
+    .chart-section .insight {
+      background: #f1f5f9; border-left: 3px solid #3b82f6; padding: 0.75rem 1rem;
+      margin-top: 1rem; border-radius: 0 6px 6px 0; font-size: 0.9rem; color: #475569;
+    }
+    .chart-section .analyse {
+      background: #f8fafc; border-left: 4px solid #1e40af; padding: 1.1rem 1.3rem;
+      margin-top: 1.2rem; border-radius: 0 8px 8px 0; font-size: 0.93rem; color: #334155;
+      line-height: 1.72; text-align: justify; hyphens: auto;
+    }
+    .chart-section .analyse strong { color: #1e293b; }
+    .chart-section .analyse em { color: #475569; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 768px) { .grid-2 { grid-template-columns: 1fr; } }
+    .chart-container { position: relative; width: 100%; }
+    .chart-container.xtall { height: 600px; }
+    .chart-container.tall { height: 500px; }
+    .chart-container.medium { height: 380px; }
+    .chart-container.small { height: 300px; }
+    .legend-custom {
+      display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 0.5rem; font-size: 0.85rem;
+    }
+    .legend-custom span::before {
+      content: ''; display: inline-block; width: 12px; height: 12px; border-radius: 3px;
+      margin-right: 5px; vertical-align: middle;
+    }
+    .legend-custom .ecole::before { background: var(--color-ecole); }
+    .legend-custom .college::before { background: var(--color-college); }
+    .legend-custom .lycee::before { background: var(--color-lycee); }
+    .toc {
+      display: block;
+      background: white; border-radius: 12px; padding: 1.5rem 2rem;
+      margin-bottom: 2rem; border: 1px solid #e2e8f0;
+    }
+    .toc h3 { margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; color: #1e293b; }
+    .toc .toc-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem 2rem;
+      list-style: none; padding: 0; margin: 0; counter-reset: toc-counter;
+    }
+    @media (max-width: 640px) { .toc .toc-grid { grid-template-columns: 1fr; } }
+    .toc .toc-grid li {
+      counter-increment: toc-counter;
+      display: flex; align-items: baseline; gap: 0.5rem;
+      padding: 0.35rem 0.5rem; border-radius: 6px; transition: background 0.15s;
+    }
+    .toc .toc-grid li:hover { background: #f1f5f9; }
+    .toc .toc-grid li::before {
+      content: counter(toc-counter, decimal-leading-zero);
+      font-size: 0.75rem; font-weight: 700; color: #94a3b8;
+      min-width: 1.6rem; text-align: right; flex-shrink: 0;
+    }
+    .toc .toc-grid li.toc-sep { grid-column: 1 / -1; padding: 0.1rem 0; }
+    .toc .toc-grid li.toc-sep span {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+      color: #10b981; font-weight: 600;
+    }
+    .toc .toc-grid li.toc-sep::before { content: none; }
+    .toc a {
+      text-decoration: none; color: #334155; font-size: 0.9rem;
+      border-bottom: 1px solid transparent; transition: border-color 0.15s;
+    }
+    .toc a:hover { border-bottom-color: #3b82f6; color: #1e40af; }
+    footer {
+      text-align: center; padding: 2rem 0; color: #94a3b8;
+      font-size: 0.85rem; border-top: 1px solid #e2e8f0; margin-top: 2rem;
+    }
+    .methodology {
+      background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px;
+      padding: 1.5rem 2rem; margin-bottom: 1.5rem;
+    }
+    .methodology h3 { color: #92400e; margin-top: 0; }
+    .section-divider {
+      text-align: center; margin: 2.5rem 0 1.5rem; color: #94a3b8;
+      font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em;
+    }
+    .section-divider span {
+      background: #f8fafc; padding: 0 1rem; position: relative;
+    }
+    .section-divider::before {
+      content: ''; position: absolute; left: 0; right: 0; top: 50%;
+      border-top: 1px solid #e2e8f0;
+    }
+    .section-divider { position: relative; }
+  </style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="container">
+    <h1>Indice de Position Sociale</h1>
+    <p>Panorama des 129 046 établissements scolaires français — Données MEN 2022-2024</p>
+  </div>
+</header>
+
+<main class="container">
+
+  <nav class="toc">
+    <h3>Sommaire</h3>
+    <ul class="toc-grid">
+      <li><a href="#kpis">Chiffres clés</a></li>
+      <li><a href="#distribution">Distribution de l'IPS</a></li>
+      <li><a href="#public-prive">Écart public / privé</a></li>
+      <li><a href="#regions">Classement par région</a></li>
+      <li><a href="#departements">Départements extrêmes</a></li>
+      <li><a href="#ecart-dep">Écart pub/privé par département</a></li>
+      <li><a href="#lycees">Focus lycées par voie</a></li>
+      <li class="toc-sep"><span>Analyses avancées</span></li>
+      <li><a href="#scatter">Corrélation école ↔ collège</a></li>
+      <li><a href="#ecart-gt-pro">Ségrégation GT vs PRO</a></li>
+      <li><a href="#boxplot">Dispersion par académie</a></li>
+      <li><a href="#lorenz">Courbes de Lorenz</a></li>
+      <li><a href="#rural-urbain">Fracture rural / urbain</a></li>
+      <li><a href="#repartition">Répartition du parc</a></li>
+      <li class="toc-sep"><span>Annexes</span></li>
+      <li><a href="#methodo">Méthodologie et sources</a></li>
+    </ul>
+  </nav>
+
+  <!-- ============ KPIs ============ -->
+  <section id="kpis">
+    <div class="kpi-grid">
+      <div class="kpi-card highlight">
+        <div class="value">129 046</div>
+        <div class="label">Établissements</div>
+      </div>
+      <div class="kpi-card">
+        <div class="value">104,8</div>
+        <div class="label">IPS moyen national</div>
+      </div>
+      <div class="kpi-card">
+        <div class="value">104,2</div>
+        <div class="label">IPS médian</div>
+      </div>
+      <div class="kpi-card">
+        <div class="value">16,3</div>
+        <div class="label">Écart-type</div>
+      </div>
+      <div class="kpi-card">
+        <div class="value">99,2%</div>
+        <div class="label">Géolocalisés</div>
+      </div>
+      <div class="kpi-card">
+        <div class="value">+15 pts</div>
+        <div class="label">Écart privé – public</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 1. DISTRIBUTION ============ -->
+  <section id="distribution" class="chart-section">
+    <h3>1. Distribution de l'IPS par type d'établissement</h3>
+    <div class="legend-custom">
+      <span class="ecole">Écoles (97 080)</span>
+      <span class="college">Collèges (21 061)</span>
+      <span class="lycee">Lycées (10 905)</span>
+    </div>
+    <div class="chart-container medium"><canvas id="chartDistribution"></canvas></div>
+    <div class="analyse">
+      La distribution de l'IPS, tous types d'établissements confondus, dessine une courbe en cloche centrée autour de 100-105, mais les trois sous-populations ne se superposent pas. Les écoles, qui représentent les trois quarts du parc scolaire, forment le pic le plus aigu (écart-type de 15,8 points) et le plus élevé en effectif absolu, ce qui reflète le maillage territorial dense du premier degré, où chaque commune (ou presque) dispose d'au moins une école élémentaire. Les collèges présentent un profil similaire quoique légèrement plus aplati, tandis que les lycées, avec un écart-type de 18,7 points, affichent la distribution la plus étalée : leur courbe s'aplatit dans les valeurs hautes comme dans les valeurs basses, signe que la spécialisation par filière (générale, technologique, professionnelle) crée des établissements aux publics socialement très différenciés. On observe en particulier que la queue droite de la distribution lycéenne (IPS supérieur à 130) reste bien visible là où celle des écoles s'amenuise fortement ; à l'inverse, la queue gauche (IPS inférieur à 85) est elle aussi plus fournie pour les lycées, ce qui trahit la présence d'établissements professionnels accueillant des publics très populaires. Cette dispersion croissante du primaire au secondaire illustre un mécanisme central de la sociologie de l'éducation française : à mesure que l'on progresse dans le parcours scolaire, l'orientation et le choix d'établissement (carte scolaire, contournement, enseignement privé) accentuent la ségrégation sociale entre institutions.
+    </div>
+  </section>
+
+  <!-- ============ 2. PUBLIC / PRIVÉ ============ -->
+  <section id="public-prive" class="chart-section">
+    <h3>2. IPS moyen : public vs privé sous contrat</h3>
+    <div class="chart-container small"><canvas id="chartPublicPrive"></canvas></div>
+    <div class="analyse">
+      L'écart d'IPS entre établissements publics et privés sous contrat constitue l'un des clivages les plus structurants du système éducatif français, et les données le confirment sans ambiguïté : +12,6 points au niveau des écoles, +19,9 pour les collèges et +18,9 pour les lycées. Ce différentiel, loin d'être un simple artefact statistique, traduit un recrutement social systématiquement plus favorisé dans le privé sous contrat, phénomène que la littérature en sociologie de l'éducation a documenté sous le terme de «&nbsp;quasi-marché scolaire&nbsp;». Le fait que l'écart soit nettement plus faible au primaire (12,6 points) qu'au secondaire (environ 19-20 points) mérite attention : les écoles élémentaires, publiques comme privées, restent largement tributaires de la géographie résidentielle, tandis qu'au collège et au lycée, le choix actif d'un établissement privé par les familles favorisées amplifie le tri social. L'on remarque par ailleurs que l'IPS moyen du privé est quasi identique entre collèges (120,0) et lycées (119,9), ce qui suggère que la clientèle du privé sous contrat se stabilise à partir du secondaire autour d'un public de classes moyennes supérieures et supérieures. Côté public, la légère baisse entre écoles (102,7) et collèges (100,1) pourrait résulter du départ, vers le privé, d'une fraction des familles les plus favorisées à l'entrée en sixième, laissant le secteur public avec un profil social légèrement plus populaire.
+    </div>
+  </section>
+
+  <!-- ============ 3. RÉGIONS ============ -->
+  <section id="regions" class="chart-section">
+    <h3>3. IPS moyen par région</h3>
+    <div class="chart-container tall"><canvas id="chartRegions"></canvas></div>
+    <div class="analyse">
+      Le classement régional de l'IPS dessine un gradient territorial particulièrement net entre la France métropolitaine et les outre-mer : Mayotte ferme la marche à 74,5, soit 38 points en dessous de l'Île-de-France (112,4), un écart considérable sur un indice dont l'écart-type national n'est que de 16 points. La Guyane (83,1), la Polynésie française (86,1) et La Réunion (86,5) partagent avec Mayotte cette relégation en bas de l'échelle, reflet d'indicateurs socio-économiques (taux de pauvreté, niveau de diplôme des parents, accès aux biens culturels) structurellement défavorables par rapport à l'Hexagone. Au sein de la métropole, les disparités, quoique moins spectaculaires, restent significatives : les Hauts-de-France (98,3) et le Grand Est (101,2) se situent sous la moyenne nationale, tandis que la Bretagne (107,7), l'Auvergne-Rhône-Alpes (108,1) et l'Île-de-France culminent en haut du classement. L'on peut formuler l'hypothèse que la position francilienne tient moins à l'absence de pauvreté (la Seine-Saint-Denis, on le verra, figure parmi les départements les plus défavorisés) qu'à l'effet de composition : la concentration de cadres supérieurs et de professions intellectuelles, notamment dans les Hauts-de-Seine et les Yvelines, tire la moyenne régionale vers le haut malgré des poches de grande précarité. Ce phénomène de moyenne masquant une forte hétérogénéité interne est précisément ce que l'analyse infrarégionale, par département et par académie, permet de révéler.
+    </div>
+  </section>
+
+  <!-- ============ 4. DÉPARTEMENTS ============ -->
+  <section id="departements">
+    <div class="grid-2">
+      <div class="chart-section">
+        <h3>4a. Les 10 départements les plus favorisés</h3>
+        <div class="chart-container medium"><canvas id="chartDepTop"></canvas></div>
+      </div>
+      <div class="chart-section">
+        <h3>4b. Les 10 départements les moins favorisés</h3>
+        <div class="chart-container medium"><canvas id="chartDepBottom"></canvas></div>
+      </div>
+    </div>
+    <div class="analyse" style="margin-top:1.2rem;">
+      La lecture conjointe des dix départements les plus favorisés et des dix les moins favorisés révèle la géographie sociale de l'école française dans toute sa brutalité. En haut du classement, les Hauts-de-Seine et Paris culminent à 124,2 points d'IPS moyen, suivis des Yvelines (121,8) : Paris et ces deux départements de l'ouest francilien concentrent les professions de cadres, les diplômés du supérieur et les revenus élevés. En bas, Mayotte (74,5) et la Guyane (83,1) incarnent les territoires ultramarins où la précarité socio-économique pèse massivement sur les conditions de scolarisation, mais la présence dans ce groupe de la Seine-Saint-Denis (94,1), du Pas-de-Calais (95,2) et de l'Aisne (94,4) rappelle que la fracture sociale ne se réduit pas à l'opposition métropole/outre-mer : les anciens bassins industriels du nord et de l'est de la France, frappés par la désindustrialisation depuis les années 1980, produisent eux aussi des publics scolaires issus de milieux où le capital économique et culturel est limité. L'écart de 50 points entre les Hauts-de-Seine et Mayotte signifie concrètement que l'on compare des établissements dont les élèves vivent dans des mondes sociaux radicalement différents, depuis l'accès aux livres et aux pratiques culturelles jusqu'à la structure familiale et au type d'emploi des parents.
+    </div>
+  </section>
+
+  <!-- ============ 5. ÉCART PUB/PRIV PAR DEP ============ -->
+  <section id="ecart-dep" class="chart-section">
+    <h3>5. Les 15 plus grands écarts IPS privé − public, par département</h3>
+    <div class="chart-container tall"><canvas id="chartEcartDep"></canvas></div>
+    <div class="analyse">
+      La carte des écarts IPS entre privé et public met en lumière un paradoxe apparent : c'est dans les départements où l'IPS public est le plus faible que l'écart avec le privé est le plus élevé. La Guyane (+33,2 points), la Seine-Saint-Denis (+31,3) et La Réunion (+30,0) occupent les trois premières places, trois territoires où le secteur public accueille un public massivement populaire et où, de ce fait, le privé sous contrat joue un rôle de refuge pour les quelques familles disposant des ressources (économiques et informationnelles) nécessaires au contournement de la carte scolaire. Les départements franciliens figurent eux aussi en bonne place (Hauts-de-Seine +28,1, Val-de-Marne +27,8, Essonne +27,5), confirmant que l'Île-de-France est le territoire où la ségrégation entre secteurs atteint son paroxysme, à savoir un système à deux vitesses dans lequel le choix du privé fonctionne comme un mécanisme de distinction sociale au sens bourdieusien. À l'inverse, les départements ruraux de l'Ouest ou du Massif central, absents de ce palmarès, présentent des écarts plus faibles, non pas parce que l'entre-soi y serait moindre, mais parce que l'offre privée y est plus rare et son recrutement davantage ancré dans l'histoire confessionnelle locale que dans une logique d'évitement. Ces données interrogent directement les politiques de mixité sociale : si l'on souhaite réduire la ségrégation scolaire, c'est précisément dans ces départements à fort écart qu'il faudrait agir, en régulant l'accès au privé ou en renforçant l'attractivité des établissements publics.
+    </div>
+  </section>
+
+  <!-- ============ 6. LYCÉES ============ -->
+  <section id="lycees" class="chart-section">
+    <h3>6. IPS moyen des lycées par voie</h3>
+    <div class="grid-2">
+      <div class="chart-container small"><canvas id="chartLyceeVoies"></canvas></div>
+      <div class="chart-container small"><canvas id="chartLyceeDonut"></canvas></div>
+    </div>
+    <div class="analyse">
+      L'IPS moyen des lycées généraux et technologiques (LEGT) s'établit à 120,5 points, celui des lycées polyvalents (LPO) à 103,9 et celui des lycées professionnels (LP) à 91,9, soit un écart de près de 29 points entre la voie générale et la voie professionnelle. Ce gradient quantifie ce que la sociologie de l'éducation appelle depuis des décennies le lien entre origine sociale et orientation scolaire. Les lycées professionnels, qui accueillent 3&nbsp;290 établissements (30&nbsp;% du parc lycéen), reçoivent des publics dont la composition sociale se situe en moyenne 13 points sous la moyenne nationale, tandis que les LEGT se positionnent 16 points au-dessus. L'on mesure ici l'ampleur de la reproduction sociale par la filière : les enfants de cadres supérieurs sont surreprésentés dans la voie générale, ceux d'ouvriers et d'employés dans la voie professionnelle, selon un schéma que Bourdieu et Passeron avaient identifié dès 1964 et qui, force est de le constater, reste d'une actualité frappante. Les LPO, avec un IPS intermédiaire de 103,9, occupent une position charnière qui reflète leur double vocation (filières générales et professionnelles sous un même toit), mais cette moyenne masque vraisemblablement une forte hétérogénéité interne entre les sections.
+    </div>
+  </section>
+
+  <div class="section-divider"><span>Analyses avancées</span></div>
+
+  <!-- ============ 7. SCATTER ============ -->
+  <section id="scatter" class="chart-section">
+    <h3>7. Corrélation IPS écoles ↔ collèges par département</h3>
+    <div class="chart-container medium"><canvas id="chartScatter"></canvas></div>
+    <div class="analyse">
+      Le nuage de points mettant en regard l'IPS moyen des écoles et celui des collèges, département par département, révèle une corrélation quasi linéaire particulièrement serrée : les points se distribuent le long de la diagonale avec très peu de dispersion, ce qui signifie que les inégalités sociales captées au primaire se retrouvent presque à l'identique au collège. Mayotte (75/72), la Guyane (83/84) et La Réunion (86/89) forment un groupe isolé en bas à gauche du graphique, tandis que Paris (123/126) et les Hauts-de-Seine (124/125) se détachent en haut à droite, confirmant l'ampleur de la polarisation territoriale déjà observée dans les classements précédents. L'alignement étroit des points sur la diagonale (avec quelques départements légèrement au-dessus, comme la Gironde où l'IPS collège dépasse l'IPS école de 3,7 points) suggère que la composition sociale des établissements est fondamentalement déterminée par la structure socio-économique du territoire, et que le passage du primaire au secondaire ne redistribue que marginalement les cartes. Ce constat a une implication forte en matière de politique éducative : si l'on souhaite agir sur la mixité sociale au collège, c'est en amont qu'il faut intervenir, sur la ségrégation résidentielle et sur les mécanismes de contournement dès le premier degré. L'on note toutefois que certains départements présentent un léger décalage vers le haut (IPS collège supérieur à l'IPS école), ce qui pourrait indiquer des effets de composition différents entre les deux niveaux, ou plus exactement un regroupement géographique des collèges qui modifie les bassins de recrutement par rapport au maillage plus fin des écoles.
+    </div>
+  </section>
+
+  <!-- ============ 8. ÉCART GT vs PRO ============ -->
+  <section id="ecart-gt-pro" class="chart-section">
+    <h3>8. Écart IPS entre voie générale (LEGT) et voie professionnelle (LP) par académie</h3>
+    <div class="chart-container xtall"><canvas id="chartEcartGTPro"></canvas></div>
+    <div class="analyse">
+      Paris domine ce classement avec un écart de 45,6 points entre l'IPS des LEGT et celui des LP, un différentiel qui dépasse de loin toutes les autres académies et qui traduit une ségrégation par filière exceptionnellement marquée dans la capitale. L'académie de Versailles (34,6 points) et celle de Guyane (33,7) suivent, la première portée par la polarisation sociale extrême de l'Ouest francilien, la seconde par un contexte ultramarin où la voie professionnelle accueille un public particulièrement défavorisé. À l'opposé, Mayotte affiche l'écart le plus faible (13,9 points), non pas parce que la mixité y serait plus forte, mais parce que l'ensemble du tissu lycéen y est positionné à un niveau d'IPS bas, ce qui comprime mécaniquement l'écart entre filières. Parmi les académies métropolitaines, Lille (33,6 points) se distingue par un écart élevé qui reflète la dualité persistante entre des lycées généraux accueillant les enfants des classes moyennes et des LP rattachés à l'ancien tissu industriel ; Amiens (22,5), en revanche, affiche un écart étonnamment modéré malgré un profil socio-économique comparable, ce qui pourrait tenir à un parc lycéen moins polarisé entre filières. L'on peut lire dans cette géographie de l'écart GT/PRO une mesure directe de ce que les sociologues appellent la «&nbsp;démocratisation ségrégative&nbsp;» : l'accès au lycée s'est certes généralisé, mais au prix d'une différenciation sociale accrue entre filières, et c'est dans les métropoles les plus inégalitaires que ce phénomène atteint son intensité maximale.
+    </div>
+  </section>
+
+  <!-- ============ 9. BOX PLOT ============ -->
+  <section id="boxplot" class="chart-section">
+    <h3>9. Dispersion de l'IPS dans les 15 plus grandes académies (P5 – Q1 – Médiane – Q3 – P95)</h3>
+    <div class="chart-container tall"><canvas id="chartBoxPlot"></canvas></div>
+    <div class="analyse">
+      La représentation en boîtes à moustaches met en évidence ce qu'une simple moyenne académique efface : la dispersion interne de chaque académie, c'est-à-dire le degré d'hétérogénéité sociale entre les établissements d'un même territoire. Versailles se distingue par l'étendue la plus large (du P5 à 81,7 au P95 à 148,2, soit 66,5 points d'amplitude) et la médiane la plus haute (117,2), mais cette médiane élevée coexiste avec un premier quartile à 98,7, signe que l'académie abrite à la fois les établissements les plus favorisés de France (dans les Hauts-de-Seine et les Yvelines) et des poches de grande difficulté sociale (nord de l'Essonne, certains secteurs du Val-d'Oise). Lille présente le profil inverse : une médiane basse (96,5) et une forte étendue (72,4 à 129,9), reflet d'une académie populaire dans laquelle les rares établissements très favorisés (métropole lilloise, quartiers aisés) cohabitent avec un grand nombre d'écoles et de collèges en éducation prioritaire. Rennes, à l'autre extrême, offre l'intervalle le plus resserré (89,4 à 128,5) avec un écart interquartile (Q1-Q3) de seulement 15,3 points, ce qui en fait l'académie la plus homogène, ou plutôt celle où la distance sociale entre établissements est la moins prononcée. L'on mesure ici l'apport d'une statistique de dispersion par rapport à la seule moyenne : deux académies peuvent afficher un IPS moyen comparable tout en présentant des tissus sociaux radicalement différents, l'une homogène, l'autre fracturée.
+    </div>
+  </section>
+
+  <!-- ============ 10. LORENZ ============ -->
+  <section id="lorenz" class="chart-section">
+    <h3>10. Courbes de Lorenz de l'IPS — mesure de la concentration des inégalités</h3>
+    <div class="legend-custom">
+      <span class="ecole">Écoles (Gini = 0,173)</span>
+      <span class="college">Collèges (Gini = 0,187)</span>
+      <span class="lycee">Lycées (Gini = 0,196)</span>
+    </div>
+    <div class="chart-container" style="width:min(100%,500px);height:500px;margin:0 auto;"><canvas id="chartLorenz"></canvas></div>
+    <div class="analyse">
+      Les courbes de Lorenz, calculées sur l'avantage social relatif (IPS observé moins l'IPS minimum du parc, c'est-à-dire la distance au plancher), permettent de mesurer la concentration des inégalités entre établissements d'une manière que ni la moyenne ni l'écart-type ne capturent. Les coefficients de Gini obtenus (0,173 pour les écoles, 0,187 pour les collèges, 0,196 pour les lycées) sont modérés en comparaison des Gini classiques des revenus (environ 0,29 en France) ou des patrimoines (au-delà de 0,65), mais cette modération tient à la nature même de l'indicateur : l'IPS est un indice construit par la DEPP à partir des professions et catégories socioprofessionnelles (PCS) des parents, auxquelles sont associées des valeurs de référence intégrant le niveau de diplôme, les conditions matérielles et les pratiques culturelles des ménages, puis lissé à l'échelle de l'établissement par moyenne sur des dizaines ou des centaines d'élèves. Ce double lissage (construction de l'indice, puis agrégation par école) compresse mécaniquement la distribution et réduit le Gini. L'on ne saurait donc interpréter un Gini de 0,17-0,20 comme le signe d'inégalités scolaires faibles : il signifie qu'après ce double lissage, il persiste une dispersion significative entre établissements, puisque les 10&nbsp;% les moins favorisés ne concentrent qu'environ 4,5&nbsp;% de l'avantage social total, là où l'égalité parfaite leur en attribuerait 10&nbsp;%.
+      <br><br>
+      La progression régulière du Gini entre écoles (0,173), collèges (0,187) et lycées (0,196) constitue le résultat le plus saillant de cette analyse : les données étant transversales (et non longitudinales), on ne peut pas conclure à une amplification causale au fil de la scolarité d'un même élève, mais le constat reste frappant : la dispersion sociale entre établissements est systématiquement plus forte aux niveaux d'enseignement supérieurs, ce qui est cohérent avec l'hypothèse d'un tri progressif opéré par l'orientation, le jeu public/privé et les stratégies de contournement des familles. Cette croissance du Gini avec le niveau d'enseignement fournit, à tout le moins, un indice convergent en faveur de la thèse selon laquelle le système scolaire français ne réduit pas les inégalités de composition sociale entre établissements à mesure que l'on monte dans les niveaux.
+    </div>
+  </section>
+
+  <!-- ============ 11. RURAL / URBAIN ============ -->
+  <section id="rural-urbain" class="chart-section">
+    <h3>11. Distribution de l'IPS selon la taille de la commune</h3>
+    <div class="chart-container medium"><canvas id="chartRuralUrbain"></canvas></div>
+    <div class="analyse">
+      La distribution de l'IPS selon la taille de la commune (nombre d'établissements par commune INSEE, utilisé ici comme proxy du degré d'urbanité) fait apparaître deux profils très contrastés. Les communes très rurales (1 à 3 établissements) présentent une distribution fortement concentrée autour de 105-106, avec un pic aigu et des queues très courtes, ce qui traduit un tissu social relativement homogène, composé principalement de classes moyennes (artisans, employés, petits agriculteurs) et peu affecté par les phénomènes de ségrégation résidentielle propres aux grandes agglomérations. Les grandes villes (100 établissements et plus) affichent au contraire une distribution très aplatie et étalée, avec une queue gauche marquée descendant jusqu'aux tranches 55-65 et un plateau élevé dans les tranches hautes : les métropoles concentrent simultanément les établissements les plus favorisés (quartiers de cadres supérieurs, centre-ville) et les plus défavorisés (quartiers d'habitat social, zones d'éducation prioritaire). L'on observe que l'IPS moyen varie finalement assez peu entre les zones (de 103,5 en zone urbaine à 105,6 en zone très rurale), alors que la dispersion, elle, croît considérablement avec la taille de la commune. Ce résultat illustre un paradoxe bien identifié par la géographie sociale : les grandes villes ne sont pas en moyenne plus défavorisées que les campagnes, mais elles sont beaucoup plus inégalitaires, c'est-à-dire qu'elles juxtaposent sur un même territoire des réalités sociales que la distance géographique sépare dans les espaces ruraux.
+    </div>
+  </section>
+
+  <!-- ============ 12. RÉPARTITION ============ -->
+  <section id="repartition">
+    <div class="grid-2">
+      <div class="chart-section">
+        <h3>12a. Répartition par type</h3>
+        <div class="chart-container small"><canvas id="chartDonutType"></canvas></div>
+      </div>
+      <div class="chart-section">
+        <h3>12b. Répartition par secteur</h3>
+        <div class="chart-container small"><canvas id="chartDonutSecteur"></canvas></div>
+      </div>
+    </div>
+    <div class="analyse" style="margin-top:1.2rem;">
+      La structure du parc scolaire français se caractérise par une pyramide quantitative prononcée : les écoles élémentaires et maternelles (97&nbsp;080 établissements, soit 75&nbsp;% du total) forment la base massive du système, les collèges (21&nbsp;061, 16&nbsp;%) constituent l'étage intermédiaire, et les lycées (10&nbsp;905, 8,5&nbsp;%) occupent le sommet, une proportion qui reflète à la fois la logique de regroupement progressif des effectifs et le maillage territorial plus fin du premier degré. Côté secteurs, le public domine largement avec 106&nbsp;759 établissements (82,7&nbsp;%), contre 22&nbsp;287 pour le privé sous contrat (17,3&nbsp;%), un rapport qui peut sembler déséquilibré mais qui masque des réalités très contrastées selon les territoires : l'Ouest breton et les métropoles affichent des taux de scolarisation en privé nettement supérieurs à la moyenne, tandis que certains départements ruraux ou ultramarins ne comptent quasiment aucun établissement privé. L'on rappellera que le poids du privé sous contrat dans le système éducatif français, quoique modeste en apparence, exerce une influence disproportionnée sur les dynamiques de ségrégation, dans la mesure où il constitue le principal levier de contournement de la carte scolaire pour les familles qui en ont les moyens. La lecture croisée de ces deux graphiques invite à ne pas considérer le «&nbsp;17&nbsp;%&nbsp;» du privé comme un chiffre anodin : c'est par ce canal que transitent une bonne part des stratégies d'évitement, et c'est là que se joue, pour partie, la mixité sociale des établissements publics environnants.
+    </div>
+  </section>
+
+  <!-- ============ MÉTHODOLOGIE ============ -->
+  <section id="methodo" class="methodology">
+    <h3>Méthodologie et sources</h3>
+    <p>
+      <strong>Sources :</strong> Ministère de l'Éducation nationale — données ouvertes (data.education.gouv.fr).<br>
+      <strong>Périmètre :</strong> 129 046 établissements (97 080 écoles, 21 061 collèges, 10 905 lycées).<br>
+      <strong>Années :</strong> Écoles : 2022-2023 ; Collèges et lycées : 2023-2024.<br>
+      <strong>Géolocalisation :</strong> 99,2% géolocalisés (76% en appariement parfait).<br>
+      <strong>Valeurs manquantes :</strong> 6 939 IPS non renseignés (5,4%), écoles à faible effectif (« NS »).<br>
+      <strong>Proxy rural/urbain :</strong> Nombre d'établissements par commune INSEE (pas de variable officielle).<br>
+      <strong>Indice de Gini :</strong> Calculé sur (IPS − IPS_min), c'est-à-dire l'avantage social au-dessus du plancher.
+      Un IPS brut (non centré) donnerait un Gini artificiellement bas car la variable ne part pas de zéro.
+    </p>
+  </section>
+
+</main>
+
+<footer>
+  <div class="container">
+    Rapport généré le 19 mai 2026 — Données Ministère de l'Éducation nationale (licence ouverte)
+  </div>
+</footer>
+
+<script>
+// ================================================================
+// DATA
+// ================================================================
+const D = {
+  hist_bins: ["50-55","55-60","60-65","65-70","70-75","75-80","80-85","85-90","90-95","95-100","100-105","105-110","110-115","115-120","120-125","125-130","130-135","135-140","140-145","145-150","150-155","155-160","160-165"],
+  hist_ecole: [2,26,204,912,2066,2871,3605,5195,8238,11141,12758,12017,9933,7288,5027,3390,2216,1554,987,565,144,11,4],
+  hist_college: [1,10,56,199,463,707,916,1475,1992,2639,2896,2522,1973,1524,1084,807,620,395,284,221,132,111,26],
+  hist_lycee: [0,1,9,27,162,336,685,955,992,889,1109,1176,1059,864,667,593,405,355,244,158,96,105,13],
+  ips_ecole_public: 102.7, ips_ecole_prive: 115.3,
+  ips_college_public: 100.1, ips_college_prive: 120.0,
+  ips_lycee_public: 101.0, ips_lycee_prive: 119.9,
+  regions: ["MAYOTTE","GUYANE","POLYNESIE FRANCAISE","LA REUNION","NOUVELLE CALEDONIE","WALLIS ET FUTUNA","GUADELOUPE","HAUTS-DE-FRANCE","MARTINIQUE","GRAND EST","BOURGOGNE-FRANCHE-COMTE","NORMANDIE","CORSE","CENTRE-VAL DE LOIRE","NOUVELLE-AQUITAINE","PAYS DE LA LOIRE","PROVENCE-ALPES-COTE D'AZUR","OCCITANIE","BRETAGNE","AUVERGNE-RHONE-ALPES","ILE-DE-FRANCE","ST PIERRE ET MIQUELON"],
+  regions_ips: [74.5,83.1,86.1,86.5,88.4,93.0,95.2,98.3,98.6,101.2,102.0,102.2,102.4,103.0,105.0,105.5,105.7,106.5,107.7,108.1,112.4,112.8],
+  dep_top10: ["SAVOIE","ISERE","RHONE","HAUTE SAVOIE","LOIRE-ATLANTIQUE","HAUTE-SAVOIE","HAUTE-GARONNE","YVELINES","PARIS","HAUTS-DE-SEINE"],
+  dep_top10_ips: [110.8,111.2,111.6,111.7,111.7,112.6,115.0,121.8,124.2,124.2],
+  dep_bottom10: ["MAYOTTE","GUYANE","LA REUNION","ARDENNES","HAUTE-MARNE","SEINE-SAINT-DENIS","AISNE","GUADELOUPE","PAS-DE-CALAIS","MEUSE"],
+  dep_bottom10_ips: [74.5,83.1,86.5,93.9,94.1,94.1,94.4,95.2,95.2,96.7],
+  ecart_dep: ["GUYANE","SEINE-SAINT-DENIS","LA REUNION","HAUTS-DE-SEINE","VAL-DE-MARNE","ESSONNE","MARTINIQUE","PARIS","YVELINES","HAUTE-CORSE","BAS-RHIN","VAL-D'OISE","PYRENEES-ORIENTALES","SEINE-ET-MARNE","VAR"],
+  ecart_vals: [33.2,31.3,30.0,28.1,27.8,27.5,26.1,25.6,24.9,24.2,24.2,24.2,23.8,23.6,23.0],
+  ips_lycee_legt: 120.5, ips_lycee_lpo: 103.9, ips_lycee_lp: 91.9,
+  lycee_types_n: [4661, 3290, 2954],
+
+  // Scatter école vs collège
+  scatter: [{"x":108.2,"y":108.8,"label":"AIN"},{"x":94.1,"y":94.1,"label":"AISNE"},{"x":98.4,"y":99.5,"label":"ALLIER"},{"x":104.9,"y":106.4,"label":"ALPES-DE-HTE-PROVENCE"},{"x":107.7,"y":108.0,"label":"ALPES-MARITIMES"},{"x":93.8,"y":93.3,"label":"ARDENNES"},{"x":97.8,"y":99.7,"label":"AUBE"},{"x":106.6,"y":104.8,"label":"BOUCHES-DU-RHONE"},{"x":99.9,"y":101.0,"label":"CHARENTE"},{"x":107.2,"y":105.8,"label":"COTE D'OR"},{"x":101.9,"y":99.9,"label":"DOUBS"},{"x":110.6,"y":109.0,"label":"ESSONNE"},{"x":108.1,"y":109.6,"label":"FINISTERE"},{"x":108.1,"y":111.8,"label":"GIRONDE"},{"x":95.1,"y":95.3,"label":"GUADELOUPE"},{"x":82.5,"y":83.7,"label":"GUYANE"},{"x":114.6,"y":115.2,"label":"HAUTE-GARONNE"},{"x":93.6,"y":94.6,"label":"HAUTE-MARNE"},{"x":112.2,"y":113.6,"label":"HAUTE-SAVOIE"},{"x":124.2,"y":125.4,"label":"HAUTS-DE-SEINE"},{"x":109.9,"y":111.0,"label":"ILLE-ET-VILAINE"},{"x":111.2,"y":110.4,"label":"ISERE"},{"x":85.6,"y":88.5,"label":"LA REUNION"},{"x":110.8,"y":113.0,"label":"LOIRE-ATLANTIQUE"},{"x":75.3,"y":72.1,"label":"MAYOTTE"},{"x":101.3,"y":98.5,"label":"MOSELLE"},{"x":99.8,"y":98.1,"label":"NORD"},{"x":123.3,"y":125.9,"label":"PARIS"},{"x":95.3,"y":94.8,"label":"PAS-DE-CALAIS"},{"x":109.5,"y":111.4,"label":"PYRENEES-ATLANTIQUES"},{"x":111.8,"y":110.7,"label":"RHONE"},{"x":110.5,"y":111.6,"label":"SAVOIE"},{"x":108.5,"y":107.7,"label":"SEINE-ET-MARNE"},{"x":101.8,"y":100.4,"label":"SEINE-MARITIME"},{"x":93.6,"y":94.2,"label":"SEINE-SAINT-DENIS"},{"x":106.8,"y":104.6,"label":"VAL-D'OISE"},{"x":109.5,"y":109.6,"label":"VAL-DE-MARNE"},{"x":121.5,"y":121.3,"label":"YVELINES"}],
+
+  // Écart GT vs PRO par académie
+  ecart_gt_pro_acad: ["MAYOTTE","GUADELOUPE","MARTINIQUE","POLYNESIE FR.","TOULOUSE","AMIENS","CLERMONT-FD","NELLE CALEDONIE","BESANCON","CORSE","CRETEIL","RENNES","NICE","LIMOGES","NORMANDIE","BORDEAUX","REIMS","ORLEANS-TOURS","POITIERS","GRENOBLE","NANCY-METZ","DIJON","LA REUNION","LYON","NANTES","MONTPELLIER","AIX-MARSEILLE","STRASBOURG","LILLE","GUYANE","VERSAILLES","PARIS"],
+  ecart_gt_pro_vals: [13.9,20.0,20.3,21.4,21.5,22.5,23.2,23.6,23.6,23.7,24.1,24.2,24.9,25.2,25.3,25.4,26.2,26.2,26.2,26.2,26.5,26.6,26.6,26.7,26.7,27.5,29.9,30.7,33.6,33.7,34.6,45.6],
+
+  // Box plot académies
+  box: {
+    "AIX-MARSEILLE": {min:72.4,q1:93.1,med:106.6,q3:117.6,max:135.5},
+    "AMIENS": {min:76.8,q1:88.8,med:98.8,q3:108.4,max:124.2},
+    "BORDEAUX": {min:86.6,q1:97.4,med:104.9,q3:114.7,max:130.4},
+    "CRETEIL": {min:78.1,q1:89.2,med:102.4,q3:115.9,max:135.8},
+    "GRENOBLE": {min:85.6,q1:101.7,med:110.0,q3:118.4,max:132.3},
+    "LILLE": {min:72.4,q1:84.4,med:96.5,q3:109.1,max:129.9},
+    "LYON": {min:77.8,q1:97.5,med:108.9,q3:120.1,max:137.4},
+    "MONTPELLIER": {min:75.1,q1:96.7,med:104.6,q3:112.9,max:128.0},
+    "NANCY-METZ": {min:77.2,q1:91.9,med:100.6,q3:109.8,max:125.0},
+    "NANTES": {min:84.8,q1:96.7,med:104.5,q3:113.5,max:130.3},
+    "NORMANDIE": {min:81.0,q1:93.9,med:101.6,q3:110.0,max:125.6},
+    "ORLEANS-TOURS": {min:80.3,q1:94.3,med:102.5,q3:112.0,max:125.4},
+    "RENNES": {min:89.4,q1:99.8,med:107.1,q3:115.1,max:128.5},
+    "TOULOUSE": {min:86.7,q1:100.3,med:107.4,q3:116.3,max:132.5},
+    "VERSAILLES": {min:81.7,q1:98.7,med:117.2,q3:132.4,max:148.2},
+  },
+
+  // Lorenz
+  lorenz_x: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50,52,54,56,58,60,62,64,66,68,70,72,74,76,78,80,82,84,86,88,90,92,94,96,98,100],
+  lorenz_ecole: [0,0.59,1.39,2.33,3.38,4.53,5.78,7.10,8.48,9.93,11.42,12.96,14.53,16.15,17.80,19.48,21.20,22.95,24.72,26.53,28.37,30.23,32.12,34.04,35.99,37.96,39.96,41.99,44.05,46.14,48.25,50.40,52.57,54.78,57.01,59.28,61.59,63.93,66.31,68.73,71.19,73.70,76.26,78.88,81.56,84.31,87.15,90.09,93.17,96.42,100],
+  lorenz_college: [0,0.57,1.37,2.30,3.34,4.49,5.71,6.99,8.33,9.73,11.16,12.65,14.18,15.75,17.35,18.99,20.67,22.38,24.12,25.88,27.68,29.50,31.35,33.22,35.13,37.07,39.03,41.02,43.04,45.09,47.17,49.29,51.43,53.61,55.83,58.09,60.38,62.72,65.10,67.53,70.02,72.56,75.16,77.83,80.58,83.42,86.37,89.43,92.66,96.12,100],
+  lorenz_lycee: [0,0.69,1.58,2.57,3.64,4.75,5.92,7.13,8.38,9.67,11.01,12.38,13.79,15.24,16.74,18.28,19.86,21.49,23.17,24.89,26.65,28.45,30.28,32.15,34.05,35.99,37.96,39.96,42.01,44.08,46.20,48.35,50.53,52.76,55.02,57.33,59.68,62.08,64.52,67.02,69.58,72.20,74.89,77.64,80.47,83.38,86.40,89.53,92.79,96.23,100],
+
+  // Rural / Urbain (% normalisés)
+  zone_bins: ["50-55","55-60","60-65","65-70","70-75","75-80","80-85","85-90","90-95","95-100","100-105","105-110","110-115","115-120","120-125","125-130","130-135","135-140","140-145","145-150","150-155","155-160","160-165"],
+  zone_rural: [0,0,0,0.02,0.13,0.47,1.5,4.07,9.92,15.62,18.57,17.34,13.55,8.68,5.01,2.6,1.29,0.69,0.37,0.15,0.04,0,0],
+  zone_periurb: [0.01,0.06,0.23,0.7,1.95,3.26,4.49,6.85,9.61,11.15,13.2,12.36,10.85,8.38,5.88,4.21,2.79,1.88,1.32,0.54,0.22,0.07,0.02],
+  zone_urbain: [0,0.02,0.3,1.63,4.08,6.39,7.43,9.17,9.19,8.4,9.04,8.83,7.89,6.83,5.28,3.97,3.21,2.98,2.1,1.75,0.79,0.61,0.13],
+  zone_gville: [0.01,0.09,0.77,2.99,5.98,6.72,7.29,7.46,6.83,6.75,6.99,7.05,6.58,6.88,6.67,6.73,5.28,3.86,2.52,1.6,0.58,0.34,0.03],
+};
+
+// ================================================================
+// DEFAULTS
+// ================================================================
+Chart.defaults.font.family = "'Inter','system-ui',sans-serif";
+Chart.defaults.font.size = 12;
+Chart.defaults.plugins.legend.display = false;
+Chart.defaults.maintainAspectRatio = false;
+
+const C = { ecole:'#3b82f6', college:'#f59e0b', lycee:'#ef4444', public:'#6366f1', prive:'#f97316' };
+
+function cScale(v, lo, hi) {
+  const t = Math.max(0, Math.min(1, (v-lo)/(hi-lo)));
+  return `rgb(${Math.round(239*(1-t)+59*t)},${Math.round(68*(1-t)+130*t)},${Math.round(68*(1-t)+246*t)})`;
+}
+
+// ================================================================
+// 1. DISTRIBUTION
+// ================================================================
+new Chart(document.getElementById('chartDistribution'), {
+  type:'line',
+  data:{labels:D.hist_bins, datasets:[
+    {label:'Écoles',data:D.hist_ecole,borderColor:C.ecole,backgroundColor:C.ecole+'20',fill:true,tension:.4,pointRadius:0},
+    {label:'Collèges',data:D.hist_college,borderColor:C.college,backgroundColor:C.college+'20',fill:true,tension:.4,pointRadius:0},
+    {label:'Lycées',data:D.hist_lycee,borderColor:C.lycee,backgroundColor:C.lycee+'20',fill:true,tension:.4,pointRadius:0},
+  ]},
+  options:{scales:{x:{title:{display:true,text:'IPS'},grid:{display:false}},y:{title:{display:true,text:"Nb établissements"},beginAtZero:true}},plugins:{tooltip:{mode:'index',intersect:false}}}
+});
+
+// ================================================================
+// 2. PUBLIC / PRIVÉ
+// ================================================================
+new Chart(document.getElementById('chartPublicPrive'), {
+  type:'bar',
+  data:{labels:['Écoles','Collèges','Lycées'],datasets:[
+    {label:'Public',data:[D.ips_ecole_public,D.ips_college_public,D.ips_lycee_public],backgroundColor:C.public,borderRadius:6},
+    {label:'Privé',data:[D.ips_ecole_prive,D.ips_college_prive,D.ips_lycee_prive],backgroundColor:C.prive,borderRadius:6},
+  ]},
+  options:{plugins:{legend:{display:true,position:'top'}},scales:{y:{min:85,title:{display:true,text:'IPS moyen'}},x:{grid:{display:false}}}}
+});
+
+// ================================================================
+// 3. RÉGIONS
+// ================================================================
+new Chart(document.getElementById('chartRegions'), {
+  type:'bar',
+  data:{labels:D.regions,datasets:[{data:D.regions_ips,backgroundColor:D.regions_ips.map(v=>cScale(v,70,115)),borderRadius:4}]},
+  options:{indexAxis:'y',scales:{x:{min:60,title:{display:true,text:'IPS moyen'}},y:{grid:{display:false}}}}
+});
+
+// ================================================================
+// 4. DÉPARTEMENTS
+// ================================================================
+new Chart(document.getElementById('chartDepTop'), {
+  type:'bar',data:{labels:D.dep_top10,datasets:[{data:D.dep_top10_ips,backgroundColor:'#3b82f6',borderRadius:4}]},
+  options:{indexAxis:'y',scales:{x:{min:105},y:{grid:{display:false}}}}
+});
+new Chart(document.getElementById('chartDepBottom'), {
+  type:'bar',data:{labels:D.dep_bottom10,datasets:[{data:D.dep_bottom10_ips,backgroundColor:'#ef4444',borderRadius:4}]},
+  options:{indexAxis:'y',scales:{x:{min:60},y:{grid:{display:false}}}}
+});
+
+// ================================================================
+// 5. ÉCART PUB/PRIV PAR DEP
+// ================================================================
+new Chart(document.getElementById('chartEcartDep'), {
+  type:'bar',
+  data:{labels:D.ecart_dep,datasets:[{data:D.ecart_vals,backgroundColor:D.ecart_vals.map(v=>`rgba(249,115,22,${.4+.6*v/35})`),borderColor:'#f97316',borderWidth:1,borderRadius:4}]},
+  options:{indexAxis:'y',scales:{x:{title:{display:true,text:"Points d'IPS"},beginAtZero:true},y:{grid:{display:false}}},plugins:{tooltip:{callbacks:{label:c=>`+${c.raw} pts`}}}}
+});
+
+// ================================================================
+// 6. LYCÉES
+// ================================================================
+new Chart(document.getElementById('chartLyceeVoies'), {
+  type:'bar',
+  data:{labels:['LEGT\n(Gén. & Techno)','LPO\n(Polyvalent)','LP\n(Professionnel)'],datasets:[{data:[D.ips_lycee_legt,D.ips_lycee_lpo,D.ips_lycee_lp],backgroundColor:['#8b5cf6','#06b6d4','#f43f5e'],borderRadius:8}]},
+  options:{scales:{y:{min:80,title:{display:true,text:'IPS moyen'}},x:{grid:{display:false}}}}
+});
+new Chart(document.getElementById('chartLyceeDonut'), {
+  type:'doughnut',
+  data:{labels:['LEGT (4 661)','LP (3 290)','LPO (2 954)'],datasets:[{data:D.lycee_types_n,backgroundColor:['#8b5cf6','#f43f5e','#06b6d4'],borderWidth:2,borderColor:'#fff'}]},
+  options:{cutout:'55%',plugins:{legend:{display:true,position:'bottom'}}}
+});
+
+// ================================================================
+// 7. SCATTER ÉCOLE vs COLLÈGE
+// ================================================================
+new Chart(document.getElementById('chartScatter'), {
+  type:'scatter',
+  data:{datasets:[{
+    data: D.scatter,
+    backgroundColor: D.scatter.map(p => {
+      if (p.x < 90 || p.y < 90) return '#ef4444';
+      if (p.x > 115 || p.y > 115) return '#3b82f6';
+      return '#94a3b8';
+    }),
+    pointRadius: 5,
+    pointHoverRadius: 8,
+  }]},
+  options:{
+    scales:{
+      x:{title:{display:true,text:'IPS moyen écoles'},min:70,max:130},
+      y:{title:{display:true,text:'IPS moyen collèges'},min:70,max:130},
+    },
+    plugins:{
+      tooltip:{callbacks:{
+        label: c => `${c.raw.label}: école=${c.raw.x}, collège=${c.raw.y}`
+      }},
+      annotation: undefined,
+    }
+  },
+  plugins: [{
+    id: 'diagonalLine',
+    afterDraw(chart) {
+      const {ctx, scales: {x, y}} = chart;
+      ctx.save();
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(x.getPixelForValue(70), y.getPixelForValue(70));
+      ctx.lineTo(x.getPixelForValue(130), y.getPixelForValue(130));
+      ctx.stroke();
+      ctx.restore();
+    }
+  }]
+});
+
+// ================================================================
+// 8. ÉCART GT vs PRO
+// ================================================================
+new Chart(document.getElementById('chartEcartGTPro'), {
+  type:'bar',
+  data:{labels:D.ecart_gt_pro_acad,datasets:[{
+    data:D.ecart_gt_pro_vals,
+    backgroundColor:D.ecart_gt_pro_vals.map(v=>cScale(v,10,50)),
+    borderRadius:3,
+  }]},
+  options:{indexAxis:'y',scales:{x:{title:{display:true,text:'Écart IPS (LEGT − LP)'},beginAtZero:true},y:{grid:{display:false},ticks:{font:{size:11}}}},
+    plugins:{tooltip:{callbacks:{label:c=>`Écart: ${c.raw} pts`}}}
+  }
+});
+
+// ================================================================
+// 9. BOX PLOT (simulé avec floating bars)
+// ================================================================
+(() => {
+  const acads = Object.keys(D.box).sort((a,b)=>D.box[a].med-D.box[b].med);
+  const boxData = acads.map(a => D.box[a]);
+
+  new Chart(document.getElementById('chartBoxPlot'), {
+    type:'bar',
+    data:{
+      labels: acads,
+      datasets: [
+        // Whisker: min→q1 (thin bar)
+        {label:'P5→Q1',data:boxData.map(b=>[b.min,b.q1]),backgroundColor:'rgba(99,102,241,0.15)',borderColor:'#6366f1',borderWidth:1,borderSkipped:false,borderRadius:2,barPercentage:0.3},
+        // IQR: q1→q3
+        {label:'Q1→Q3',data:boxData.map(b=>[b.q1,b.q3]),backgroundColor:'rgba(99,102,241,0.4)',borderColor:'#6366f1',borderWidth:1,borderSkipped:false,borderRadius:4,barPercentage:0.7},
+        // Whisker: q3→max
+        {label:'Q3→P95',data:boxData.map(b=>[b.q3,b.max]),backgroundColor:'rgba(99,102,241,0.15)',borderColor:'#6366f1',borderWidth:1,borderSkipped:false,borderRadius:2,barPercentage:0.3},
+      ]
+    },
+    options:{
+      indexAxis:'y',
+      scales:{x:{min:65,max:155,title:{display:true,text:'IPS'}},y:{grid:{display:false},stacked:false}},
+      plugins:{tooltip:{callbacks:{
+        title: c => c[0].label,
+        label: c => {const b=D.box[c.label]; return `P5=${b.min} | Q1=${b.q1} | Méd=${b.med} | Q3=${b.q3} | P95=${b.max}`;}
+      }}}
+    },
+    plugins:[{
+      id:'medianDots',
+      afterDatasetsDraw(chart) {
+        const {ctx, scales:{x,y}} = chart;
+        acads.forEach((a,i) => {
+          const b = D.box[a];
+          const py = y.getPixelForValue(i);
+          const px = x.getPixelForValue(b.med);
+          ctx.save();
+          ctx.fillStyle = '#fff';
+          ctx.strokeStyle = '#1e293b';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(px, py, 5, 0, Math.PI*2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+    }]
+  });
+})();
+
+// ================================================================
+// 10. LORENZ
+// ================================================================
+new Chart(document.getElementById('chartLorenz'), {
+  type:'line',
+  data:{labels:D.lorenz_x,datasets:[
+    {label:'Égalité parfaite',data:D.lorenz_x,borderColor:'#cbd5e1',borderDash:[5,5],borderWidth:1,pointRadius:0,fill:false},
+    {label:'Écoles (Gini=0,173)',data:D.lorenz_ecole,borderColor:C.ecole,backgroundColor:C.ecole+'15',fill:'+1',tension:.3,pointRadius:0,borderWidth:2},
+    {label:'Collèges (Gini=0,187)',data:D.lorenz_college,borderColor:C.college,borderWidth:2,tension:.3,pointRadius:0,fill:false},
+    {label:'Lycées (Gini=0,196)',data:D.lorenz_lycee,borderColor:C.lycee,borderWidth:2,tension:.3,pointRadius:0,fill:false},
+  ]},
+  options:{
+    scales:{
+      x:{title:{display:true,text:'% cumulé des établissements (triés par IPS croissant)'},min:0,max:100,grid:{display:false}},
+      y:{title:{display:true,text:'% cumulé de l\'IPS total'},min:0,max:100}
+    },
+    plugins:{tooltip:{mode:'index',intersect:false}}
+  }
+});
+
+// ================================================================
+// 11. RURAL / URBAIN
+// ================================================================
+new Chart(document.getElementById('chartRuralUrbain'), {
+  type:'line',
+  data:{labels:D.zone_bins,datasets:[
+    {label:'Très rural (IPS moy=105,6)',data:D.zone_rural,borderColor:'#22c55e',backgroundColor:'#22c55e20',fill:true,tension:.4,pointRadius:0,borderWidth:2},
+    {label:'Périurbain (IPS moy=104,9)',data:D.zone_periurb,borderColor:'#f59e0b',fill:false,tension:.4,pointRadius:0,borderWidth:2},
+    {label:'Urbain (IPS moy=103,5)',data:D.zone_urbain,borderColor:'#8b5cf6',fill:false,tension:.4,pointRadius:0,borderWidth:2},
+    {label:'Grande ville (IPS moy=104,2)',data:D.zone_gville,borderColor:'#ef4444',backgroundColor:'#ef444420',fill:true,tension:.4,pointRadius:0,borderWidth:2},
+  ]},
+  options:{
+    scales:{
+      x:{title:{display:true,text:'IPS'},grid:{display:false}},
+      y:{title:{display:true,text:'% des établissements de la zone'},beginAtZero:true}
+    },
+    plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'line'}},tooltip:{mode:'index',intersect:false}}
+  }
+});
+
+// ================================================================
+// 12. DONUTS
+// ================================================================
+new Chart(document.getElementById('chartDonutType'), {
+  type:'doughnut',
+  data:{labels:['Écoles (97 080)','Collèges (21 061)','Lycées (10 905)'],datasets:[{data:[97080,21061,10905],backgroundColor:[C.ecole,C.college,C.lycee],borderWidth:2,borderColor:'#fff'}]},
+  options:{cutout:'55%',plugins:{legend:{display:true,position:'bottom'}}}
+});
+new Chart(document.getElementById('chartDonutSecteur'), {
+  type:'doughnut',
+  data:{labels:['Public (106 759)','Privé sous contrat (22 287)'],datasets:[{data:[106759,22287],backgroundColor:[C.public,C.prive],borderWidth:2,borderColor:'#fff'}]},
+  options:{cutout:'55%',plugins:{legend:{display:true,position:'bottom'}}}
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Raw source CSVs (too large for GitHub, downloadable from data.gouv.fr)
+data/fr-en-ips-*.csv
+
+# Build scripts (local only)
+scripts/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE / Claude
+.claude/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak
